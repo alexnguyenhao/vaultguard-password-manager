@@ -1,0 +1,82 @@
+name: Go Live 24/7 (GitHub Pages) & Build Windows Desktop (.EXE)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-and-release"
+  cancel-in-progress: false
+
+jobs:
+  # ==========================================================================
+  # JOB 1: GO LIVE 24/7 ON GITHUB PAGES (WORKS EVEN WHEN YOUR PC IS OFF)
+  # ==========================================================================
+  deploy-pages:
+    name: Deploy 24/7 Web App to GitHub Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload static Web Vault artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './public'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ==========================================================================
+  # JOB 2: BUILD WINDOWS DESKTOP APP (.EXE PORTABLE) & PUBLISH GITHUB RELEASE
+  # ==========================================================================
+  release-windows-desktop:
+    name: Build Windows Desktop (.EXE) & Create Downloadable Release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies & electron-builder
+        run: |
+          npm install
+          npm install --no-save electron-builder
+
+      - name: Build Windows Portable .EXE & .ZIP
+        run: npx electron-builder --win portable zip --publish never
+
+      - name: Publish to GitHub Releases (Latest Download)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: "VaultGuard Desktop v1.0.0 (Windows .EXE & Portable)"
+          body: |
+            ## 🛡️ VaultGuard — Phần mềm Quản lý Mật khẩu Đa Nền Tảng (Google Authentication)
+            ### 📥 Tải về cho máy tính Windows:
+            - **`VaultGuard-Portable-1.0.0.exe`**: Bản chạy ngay không cần cài đặt (Click đúp là mở).
+            - **`VaultGuard-win-x64.zip`**: Bản giải nén đầy đủ.
+            ### 🌐 Dùng trực tiếp trên Web 24/7 (Không cần cài đặt):
+            - Truy cập: **https://alexnguyenhao.github.io/vaultguard-password-manager/**
+          files: |
+            dist/*.exe
+            dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

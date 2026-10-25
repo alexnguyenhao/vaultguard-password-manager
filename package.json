@@ -1,0 +1,40 @@
+{
+  "name": "vaultguard-local-password-manager",
+  "version": "1.0.0",
+  "description": "Local Electron Desktop & 24/7 Cloud Web multi-platform password manager secured by Google Authentication (Google Authenticator TOTP 2FA + Google OAuth 2.0) and AES-256-GCM",
+  "main": "electron/main.js",
+  "author": "AlexNguyen <alex.nguyen.hao@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "electron": "electron .",
+    "web": "node server.js",
+    "test": "node test/verify-vault.js",
+    "dist": "npx electron-builder --win portable zip"
+  },
+  "build": {
+    "appId": "com.alexnguyenhao.vaultguard",
+    "productName": "VaultGuard",
+    "files": [
+      "electron/**/*",
+      "public/**/*",
+      "src/**/*",
+      "server.js",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "zip"
+      ],
+      "artifactName": "VaultGuard-Portable-${version}.${ext}"
+    }
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0"
+  }
+}

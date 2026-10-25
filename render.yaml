@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: vaultguard-password-manager
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev --ignore-scripts
+    startCommand: node server.js
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 3456
+      - key: NODE_ENV
+        value: production

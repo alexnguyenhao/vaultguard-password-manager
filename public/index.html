@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VaultGuard Local — Quản Lý Mật Khẩu Đa Nền Tảng (Google Authentication)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <!-- Top Download & Live Cloud Bar (Shown on Web / GitHub Pages so visitors can download the Desktop App) -->
+  <div id="webDownloadRibbon" class="web-download-ribbon hidden">
+    <div class="ribbon-left">
+      <span class="live-pulse"></span>
+      <span><strong>VaultGuard Live 24/7</strong> — Đang chạy chế độ Mã Hóa Zero-Knowledge AES-256 trên trình duyệt (Hoạt động cả khi máy chủ cá nhân tắt)</span>
+    </div>
+    <div class="ribbon-actions">
+      <a href="https://github.com/alexnguyenhao/vaultguard-password-manager/releases/latest" target="_blank" rel="noopener noreferrer" class="ribbon-btn primary">
+        ⬇️ Tải Bản Desktop Windows (.EXE / Portable)
+      </a>
+      <a href="https://github.com/alexnguyenhao/vaultguard-password-manager" target="_blank" rel="noopener noreferrer" class="ribbon-btn">
+        ⭐ Mã nguồn GitHub
+      </a>
+    </div>
+  </div>
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Clipboard Auto-Clear Banner -->
+  <div id="clipboardBanner" class="clipboard-banner hidden">
+    <span class="clipboard-dot"></span>
+    <span id="clipboardBannerText">Đã sao chép mật khẩu. Tự động xóa bộ nhớ tạm sau <strong id="clipboardTimer">20</strong>s</span>
+    <button type="button" id="clearClipboardNowBtn" class="btn-link">Xóa ngay</button>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- VIEW 1: FIRST-TIME SETUP WIZARD (GOOGLE AUTHENTICATOR + VAULT INIT)  -->
+  <!-- ==================================================================== -->
+  <main id="setupView" class="auth-stage hidden">
+    <div class="auth-shell setup-shell">
+      <header class="auth-brand-header">
+        <div class="brand-mark">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            <circle cx="12" cy="16" r="1.5"></circle>
+          </svg>
+        </div>
+        <div>
+          <div class="security-pill">AES-256-GCM LOCAL VAULT • RFC 6238 TOTP</div>
+          <h1>Thiết lập Kho Mật Khẩu &amp; Google Authentication</h1>
+          <p class="subtitle">Dữ liệu mật khẩu được mã hóa hoàn toàn trên ổ cứng máy tính của bạn và chỉ mở khóa khi xác thực Google Authentication thành công.</p>
+        </div>
+      </header>
+
+      <form id="setupForm" class="setup-grid" autocomplete="off">
+        <!-- Left Column: Step 1 - Scan Google Authenticator QR -->
+        <section class="setup-card">
+          <div class="step-header">
+            <span class="step-badge">Bước 1</span>
+            <h2>Liên kết ứng dụng Google Authenticator</h2>
+          </div>
+          <p class="step-desc">
+            Mở ứng dụng <strong>Google Authenticator</strong> trên điện thoại (iOS/Android), bấm dấu <strong>+</strong> và chọn <strong>Quét mã QR</strong> bên dưới:
+          </p>
+
+          <div class="qr-stage">
+            <div class="qr-frame">
+              <img id="setupQrImage" alt="Google Authenticator QR Code" src="" />
+            </div>
+            <div class="qr-meta">
+              <label class="field-label">Hoặc nhập mã khóa thiết lập thủ công (Base32):</label>
+              <div class="secret-copy-box">
+                <code id="setupSecretText">Đang tạo...</code>
+                <button type="button" id="copySetupSecretBtn" class="btn-icon" title="Sao chép mã khóa">Copy</button>
+              </div>
+
+              <div class="setup-clock-helper">
+                <div class="helper-row">
+                  <span>Mã 6 số hiện tại của QR này (để đối chiếu/test nhanh):</span>
+                  <button type="button" id="fillSetupOtpBtn" class="btn-mini">Điền tự động mã này</button>
+                </div>
+                <div class="live-otp-preview">
+                  <span id="setupLiveOtpCode" class="mono-otp">------</span>
+                  <span id="setupLiveOtpCountdown" class="otp-countdown-badge">30s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right Column: Step 2 - Security Mode & Master Key -->
+        <section class="setup-card">
+          <div class="step-header">
+            <span class="step-badge">Bước 2</span>
+            <h2>Cấu hình phương thức mở khóa &amp; Mã xác nhận</h2>
+          </div>
+
+          <div class="form-group">
+            <label for="setupOwnerName" class="field-label">Tên chủ sở hữu kho mật khẩu</label>
+            <input type="text" id="setupOwnerName" class="input-control" placeholder="VD: Kho Mật Khẩu Cá Nhân của Tôi" value="Kho Mật Khẩu Cá Nhân" required />
+          </div>
+
+          <div class="form-group">
+            <label for="setupAuthMode" class="field-label">Chế độ yêu cầu khi đăng nhập vào kho</label>
+            <select id="setupAuthMode" class="input-control">
+              <option value="totp_and_master">Mã 6 số Google Authenticator + Mật khẩu chính (Khuyên dùng - Bảo mật 2 lớp)</option>
+              <option value="totp_only">Chỉ cần nhập Mã 6 số Google Authenticator (Mở nhanh bằng điện thoại)</option>
+              <option value="google_oauth_and_totp">Đăng nhập Tài khoản Google (OAuth 2.0) + Mã 6 số Google Authenticator</option>
+            </select>
+          </div>
+
+          <div id="setupGoogleOAuthFields" class="oauth-config-box hidden">
+            <div class="form-group">
+              <label for="setupGoogleEmail" class="field-label">Email Google được phép truy cập</label>
+              <input type="email" id="setupGoogleEmail" class="input-control" placeholder="your.email@gmail.com" />
+            </div>
+            <div class="form-group">
+              <label for="setupGoogleClientId" class="field-label">Google OAuth Client ID (Tùy chọn - có thể thêm sau trong Cài đặt)</label>
+              <input type="text" id="setupGoogleClientId" class="input-control mono-text" placeholder="123456789-xxx.apps.googleusercontent.com" />
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="setupMasterPassword" class="field-label">Mật khẩu chính (Master Password mã hóa AES-256)</label>
+              <input type="password" id="setupMasterPassword" class="input-control" placeholder="Tối thiểu 6 ký tự..." minlength="6" required />
+            </div>
+            <div class="form-group">
+              <label for="setupMasterPasswordConfirm" class="field-label">Nhập lại Mật khẩu chính</label>
+              <input type="password" id="setupMasterPasswordConfirm" class="input-control" placeholder="Nhập lại mật khẩu..." minlength="6" required />
+            </div>
+          </div>
+
+          <div class="form-group highlight-box">
+            <label for="setupTotpInput" class="field-label">Nhập mã 6 chữ số từ ứng dụng Google Authenticator để kích hoạt</label>
+            <input
+              type="text"
+              id="setupTotpInput"
+              class="input-control otp-single-input"
+              placeholder="000000"
+              maxlength="6"
+              inputmode="numeric"
+              pattern="[0-9]{6}"
+              required
+            />
+          </div>
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="setupSeedSamples" checked />
+            <span>Tạo sẵn 6 tài khoản mẫu đa nền tảng (Gmail, Facebook, GitHub, Vietcombank) để xem thử bố cục (có thể xóa bất kỳ lúc nào)</span>
+          </label>
+
+          <div id="setupErrorBox" class="alert-error hidden"></div>
+
+          <button type="submit" id="setupSubmitBtn" class="btn-primary btn-large">
+            Kích Hoạt Kho Mật Khẩu &amp; Bật Google Authentication
+          </button>
+        </section>
+      </form>
+    </div>
+  </main>
+
+  <!-- ==================================================================== -->
+  <!-- VIEW 2: GOOGLE AUTHENTICATION LOGIN GATE                             -->
+  <!-- ==================================================================== -->
+  <main id="loginView" class="auth-stage hidden">
+    <div class="auth-shell login-shell">
+      <div class="login-card">
+        <div class="login-top-badge">
+          <span class="status-dot locked"></span>
+          <span>KHO ĐANG KHÓA (AES-256-GCM ENCRYPTED)</span>
+        </div>
+
+        <div class="login-header">
+          <div class="google-auth-shield">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+          </div>
+          <h1 id="loginVaultTitle">VaultGuard Local</h1>
+          <p id="loginModeSubtitle" class="subtitle">
+            Xác thực bằng ứng dụng <strong>Google Authenticator</strong> để giải mã và xem mật khẩu các nền tảng.
+          </p>
+        </div>
+
+        <!-- Optional Google OAuth Sign-In Section (shown when configured or selected) -->
+        <div id="googleOAuthLoginSection" class="google-oauth-section hidden">
+          <div class="oauth-status-bar" id="googleOAuthStatus">
+            <span>Bước 1: Xác thực tài khoản Google của bạn</span>
+          </div>
+          <div id="googleSignInButtonContainer" class="google-btn-wrap"></div>
+        </div>
+
+        <form id="loginForm" autocomplete="off">
+          <!-- Master Password Input (shown when authMode requires master password) -->
+          <div id="loginMasterPasswordGroup" class="form-group">
+            <label for="loginMasterPassword" class="field-label">Mật khẩu chính (Master Password)</label>
+            <div class="password-input-wrap">
+              <input
+                type="password"
+                id="loginMasterPassword"
+                class="input-control"
+                placeholder="Nhập Master Password của bạn..."
+              />
+              <button type="button" id="toggleLoginPasswordBtn" class="btn-eye" title="Hiện/Ẩn mật khẩu">Hiện</button>
+            </div>
+          </div>
+
+          <!-- 6-Digit Google Authenticator OTP Segmented Input -->
+          <div id="loginTotpGroup" class="form-group">
+            <div class="label-split">
+              <label class="field-label">Mã 6 số từ ứng dụng Google Authenticator</label>
+              <span class="totp-timer-pill" id="loginTotpCycleIndicator">Chu kỳ 30s</span>
+            </div>
+            <div class="otp-digit-grid" id="otpDigitGrid">
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-index="0" aria-label="Số thứ 1" />
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-index="1" aria-label="Số thứ 2" />
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-index="2" aria-label="Số thứ 3" />
+              <span class="otp-sep">-</span>
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-index="3" aria-label="Số thứ 4" />
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-index="4" aria-label="Số thứ 5" />
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-index="5" aria-label="Số thứ 6" />
+            </div>
+          </div>
+
+          <!-- Recovery Code Fallback Input (hidden by default) -->
+          <div id="loginRecoveryGroup" class="form-group hidden">
+            <label for="loginRecoveryInput" class="field-label">Mã khôi phục dự phòng (Recovery Code 12 ký tự)</label>
+            <input
+              type="text"
+              id="loginRecoveryInput"
+              class="input-control mono-text"
+              placeholder="XXXX-XXXX-XXXX"
+            />
+          </div>
+
+          <div id="loginErrorBox" class="alert-error hidden"></div>
+
+          <button type="submit" id="loginSubmitBtn" class="btn-primary btn-large">
+            Xác Thực Google Authentication &amp; Mở Kho
+          </button>
+
+          <div class="login-footer-links">
+            <button type="button" id="toggleRecoveryModeBtn" class="btn-link">
+              Mất điện thoại Google Authenticator? Dùng mã khôi phục dự phòng
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================================================================== -->
+  <!-- VIEW 3: MAIN PASSWORD VAULT WORKSPACE                                -->
+  <!-- ==================================================================== -->
+  <div id="vaultWorkspace" class="vault-layout hidden">
+    <!-- Left Sidebar -->
+    <aside class="vault-sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark small">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div class="brand-title-wrap">
+          <strong id="sidebarVaultName">VaultGuard</strong>
+          <span class="verified-badge">Google Auth đã xác thực</span>
+        </div>
+      </div>
+
+      <!-- Security Health Summary Box -->
+      <div class="health-widget">
+        <div class="health-header">
+          <span>Điểm An Toàn Kho</span>
+          <strong id="healthScoreValue" class="health-score">100/100</strong>
+        </div>
+        <div class="health-bar-track">
+          <div id="healthBarFill" class="health-bar-fill" style="width: 100%"></div>
+        </div>
+        <div class="health-stats-grid">
+          <button type="button" class="health-stat-btn" data-filter="all" title="Tổng số tài khoản">
+            <span id="statTotalAccounts">0</span>
+            <small>Tài khoản</small>
+          </button>
+          <button type="button" class="health-stat-btn" data-filter="weak" title="Lọc mật khẩu yếu">
+            <span id="statWeakAccounts" class="text-danger">0</span>
+            <small>Mật khẩu yếu</small>
+          </button>
+          <button type="button" class="health-stat-btn" data-filter="reused" title="Lọc mật khẩu trùng lặp">
+            <span id="statReusedAccounts" class="text-warning">0</span>
+            <small>Trùng lặp</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- Platform Category Navigation -->
+      <nav class="sidebar-nav">
+        <div class="nav-group-title">Phân loại nền tảng</div>
+        <button type="button" class="nav-item active" data-category="all">
+          <span>Tất cả nền tảng</span>
+          <span class="nav-count" id="countAll">0</span>
+        </button>
+        <button type="button" class="nav-item" data-category="favorites">
+          <span>★ Đánh dấu quan trọng</span>
+          <span class="nav-count" id="countFavorites">0</span>
+        </button>
+        <button type="button" class="nav-item" data-category="email">
+          <span>Google &amp; Email</span>
+          <span class="nav-count" id="countEmail">0</span>
+        </button>
+        <button type="button" class="nav-item" data-category="social">
+          <span>Mạng xã hội (FB, TikTok, Zalo...)</span>
+          <span class="nav-count" id="countSocial">0</span>
+        </button>
+        <button type="button" class="nav-item" data-category="finance">
+          <span>Ngân hàng &amp; Tài chính</span>
+          <span class="nav-count" id="countFinance">0</span>
+        </button>
+        <button type="button" class="nav-item" data-category="dev">
+          <span>Công việc, Cloud &amp; Dev</span>
+          <span class="nav-count" id="countDev">0</span>
+        </button>
+        <button type="button" class="nav-item" data-category="gaming">
+          <span>Giải trí &amp; Game</span>
+          <span class="nav-count" id="countGaming">0</span>
+        </button>
+        <button type="button" class="nav-item" data-category="shopping">
+          <span>Mua sắm &amp; Khác</span>
+          <span class="nav-count" id="countShopping">0</span>
+        </button>
+
+        <div class="nav-group-title" style="margin-top: 18px;">Công cụ &amp; Bảo mật</div>
+        <button type="button" id="openGeneratorModalBtn" class="nav-item tool-item">
+          <span>⚡ Trình tạo mật khẩu mạnh</span>
+        </button>
+        <button type="button" id="openBackupModalBtn" class="nav-item tool-item">
+          <span>💾 Sao lưu &amp; Nhập dữ liệu</span>
+        </button>
+        <button type="button" id="openSettingsModalBtn" class="nav-item tool-item">
+          <span>📱 Cài đặt Google Auth &amp; Mã QR</span>
+        </button>
+        <button type="button" id="openAuditLogsModalBtn" class="nav-item tool-item">
+          <span>🛡️ Nhật ký truy cập kho</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button type="button" id="lockVaultBtn" class="btn-lock-vault" title="Phím tắt: Ctrl + L">
+          🔒 Khóa Kho Ngay (Ctrl+L)
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <section class="vault-main">
+      <!-- Top Command Bar -->
+      <header class="vault-topbar">
+        <div class="search-box-wrap">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="search"
+            id="searchInput"
+            class="search-input"
+            placeholder="Tìm theo nền tảng (Facebook, Gmail...), tên nick, email, số điện thoại hoặc nhãn (Ctrl+K)..."
+          />
+        </div>
+
+        <div class="topbar-actions">
+          <!-- Electron Desktop Exclusive Controls (Auto-shown when running inside Electron) -->
+          <div id="electronDesktopControls" class="view-switcher hidden" style="gap:4px;">
+            <button type="button" id="toggleScreenProtectBtn" class="view-btn active" title="Ngăn phần mềm quay lén/chụp màn hình mật khẩu trên Windows">
+              🛡️ Chống chụp màn hình: BẬT
+            </button>
+            <button type="button" id="toggleAlwaysOnTopBtn" class="view-btn" title="Ghim cửa sổ nổi lên trên để tiện đăng nhập nhiều tài khoản">
+              📌 Ghim nổi cửa sổ
+            </button>
+          </div>
+
+          <div class="view-switcher" role="group" aria-label="Chế độ hiển thị">
+            <button type="button" id="viewGroupedBtn" class="view-btn active" title="Gom nhóm nhiều tài khoản theo từng nền tảng">
+              Gom theo Nền tảng
+            </button>
+            <button type="button" id="viewTableBtn" class="view-btn" title="Xem dạng bảng danh sách phẳng">
+              Danh sách phẳng
+            </button>
+          </div>
+
+          <button type="button" id="addAccountBtn" class="btn-primary">
+            + Thêm Tài Khoản Mới
+          </button>
+        </div>
+      </header>
+
+      <!-- Active Filter Bar -->
+      <div id="activeFilterStrip" class="filter-strip hidden">
+        <span id="activeFilterText">Đang lọc: Tất cả</span>
+        <button type="button" id="resetFilterBtn" class="btn-link">Xóa bộ lọc</button>
+      </div>
+
+      <!-- Accounts Container -->
+      <div id="accountsContainer" class="accounts-container"></div>
+    </section>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 1: ADD / EDIT ACCOUNT (SUPPORTS MULTI-ACCOUNT PER PLATFORM)    -->
+  <!-- ==================================================================== -->
+  <div id="accountModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2 id="accountModalTitle">Thêm Tài Khoản Mới</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="accountModal">&times;</button>
+      </div>
+
+      <form id="accountForm" autocomplete="off">
+        <input type="hidden" id="accId" />
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="accPlatform" class="field-label">Tên Nền Tảng / Dịch Vụ *</label>
+            <input
+              type="text"
+              id="accPlatform"
+              list="platformSuggestions"
+              class="input-control"
+              placeholder="VD: Google / Gmail, Facebook, GitHub, Vietcombank..."
+              required
+            />
+            <datalist id="platformSuggestions">
+              <option value="Google / Gmail"></option>
+              <option value="Facebook"></option>
+              <option value="Zalo"></option>
+              <option value="TikTok"></option>
+              <option value="Instagram"></option>
+              <option value="GitHub"></option>
+              <option value="GitLab"></option>
+              <option value="AWS Cloud"></option>
+              <option value="Cloudflare"></option>
+              <option value="Vietcombank Digibank"></option>
+              <option value="Techcombank"></option>
+              <option value="MB Bank"></option>
+              <option value="Binance"></option>
+              <option value="Shopee"></option>
+              <option value="Steam"></option>
+              <option value="Netflix"></option>
+              <option value="Apple ID"></option>
+              <option value="Microsoft / Outlook"></option>
+            </datalist>
+          </div>
+
+          <div class="form-group">
+            <label for="accCategory" class="field-label">Nhóm danh mục</label>
+            <select id="accCategory" class="input-control">
+              <option value="email">Google &amp; Email</option>
+              <option value="social">Mạng xã hội (FB, TikTok, Zalo...)</option>
+              <option value="finance">Ngân hàng &amp; Tài chính</option>
+              <option value="dev">Công việc, Cloud &amp; Dev</option>
+              <option value="gaming">Giải trí &amp; Game</option>
+              <option value="shopping">Mua sắm &amp; Khác</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="accLabel" class="field-label">Nhãn phân biệt tài khoản (Khi có nhiều nick) *</label>
+            <input
+              type="text"
+              id="accLabel"
+              class="input-control"
+              placeholder="VD: Nick Chính, Nick Phụ #2, Tài khoản Công ty..."
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="accUsername" class="field-label">Tên đăng nhập / Email / SĐT *</label>
+            <input
+              type="text"
+              id="accUsername"
+              class="input-control"
+              placeholder="email@gmail.com hoặc 0901234567"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="label-split">
+            <label for="accPassword" class="field-label">Mật khẩu *</label>
+            <button type="button" id="generateQuickPwdBtn" class="btn-mini">⚡ Sinh mật khẩu mạnh ngẫu nhiên</button>
+          </div>
+          <div class="password-input-wrap">
+            <input
+              type="password"
+              id="accPassword"
+              class="input-control mono-text"
+              placeholder="Nhập hoặc tạo mật khẩu..."
+              required
+            />
+            <button type="button" id="toggleAccPasswordBtn" class="btn-eye">Hiện</button>
+          </div>
+          <div class="pwd-strength-meter">
+            <div class="pwd-strength-bar">
+              <div id="accPwdStrengthFill" class="pwd-strength-fill"></div>
+            </div>
+            <span id="accPwdStrengthLabel" class="pwd-strength-text">Chưa nhập</span>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="accUrl" class="field-label">Đường dẫn đăng nhập (URL)</label>
+            <input
+              type="text"
+              id="accUrl"
+              class="input-control"
+              placeholder="https://..."
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="accTotpSecret" class="field-label">Mã khóa 2FA TOTP của tài khoản này (Tùy chọn)</label>
+            <input
+              type="text"
+              id="accTotpSecret"
+              class="input-control mono-text"
+              placeholder="Base32 Secret để tự sinh mã 6 số..."
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="accTags" class="field-label">Thẻ (Tags - cách nhau bằng dấu phẩy)</label>
+          <input
+            type="text"
+            id="accTags"
+            class="input-control"
+            placeholder="VD: Chính, Công việc, Đã bật 2FA"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="accNotes" class="field-label">Ghi chú bảo mật (Câu hỏi bảo mật, mã PIN, email khôi phục...)</label>
+          <textarea
+            id="accNotes"
+            rows="3"
+            class="input-control"
+            placeholder="Ghi chú này cũng được mã hóa AES-256-GCM..."
+          ></textarea>
+        </div>
+
+        <!-- Password History Section (visible when editing an account with previous passwords) -->
+        <div id="accHistorySection" class="history-box hidden">
+          <div class="field-label">Lịch sử mật khẩu cũ của tài khoản này:</div>
+          <div id="accHistoryList" class="history-list"></div>
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="accFavorite" />
+          <span>Đánh dấu là tài khoản quan trọng (★ Yêu thích)</span>
+        </label>
+
+        <div id="accountModalError" class="alert-error hidden"></div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" data-close-modal="accountModal">Hủy</button>
+          <button type="submit" class="btn-primary">Lưu Tài Khoản (Mã hóa AES-256)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 2: RECOVERY CODES DISPLAY (SHOWN AFTER INITIAL SETUP)          -->
+  <!-- ==================================================================== -->
+  <div id="recoveryCodesModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2>🎉 Thiết lập thành công! Lưu lại 8 Mã Khôi Phục Dự Phòng</h2>
+      </div>
+      <p class="step-desc">
+        Nếu bạn làm mất điện thoại cài <strong>Google Authenticator</strong>, bạn có thể dùng một trong 8 mã dự phòng dưới đây để mở khóa kho mật khẩu. Mỗi mã chỉ sử dụng được <strong>1 lần duy nhất</strong>.
+      </p>
+      <div id="recoveryCodesGrid" class="recovery-codes-grid"></div>
+      <div class="modal-footer">
+        <button type="button" id="downloadRecoveryCodesBtn" class="btn-secondary">⬇️ Tải về file .TXT</button>
+        <button type="button" id="ackRecoveryCodesBtn" class="btn-primary">Tôi đã lưu mã an toàn — Vào Kho Mật Khẩu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 3: PASSWORD GENERATOR                                          -->
+  <!-- ==================================================================== -->
+  <div id="generatorModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2>⚡ Trình Tạo Mật Khẩu Mạnh</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="generatorModal">&times;</button>
+      </div>
+
+      <div class="generated-pwd-box">
+        <code id="generatedPwdOutput" class="generated-pwd-text"></code>
+        <button type="button" id="copyGeneratedPwdBtn" class="btn-primary">Copy</button>
+      </div>
+
+      <div class="form-group">
+        <div class="label-split">
+          <label for="genLengthRange" class="field-label">Độ dài mật khẩu</label>
+          <strong id="genLengthValue" class="mono-text">20 ký tự</strong>
+        </div>
+        <input type="range" id="genLengthRange" min="8" max="64" value="20" class="range-slider" />
+      </div>
+
+      <div class="checkbox-grid">
+        <label class="checkbox-row"><input type="checkbox" id="genUpper" checked /> Chữ hoa (A-Z)</label>
+        <label class="checkbox-row"><input type="checkbox" id="genLower" checked /> Chữ thường (a-z)</label>
+        <label class="checkbox-row"><input type="checkbox" id="genDigits" checked /> Chữ số (0-9)</label>
+        <label class="checkbox-row"><input type="checkbox" id="genSymbols" checked /> Ký tự đặc biệt (!@#$%^&amp;*)</label>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="regeneratePwdBtn" class="btn-secondary">🔄 Tạo chuỗi khác</button>
+        <button type="button" class="btn-primary" data-close-modal="generatorModal">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 4: GOOGLE AUTHENTICATION SETTINGS & QR CODE                    -->
+  <!-- ==================================================================== -->
+  <div id="settingsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2>📱 Cài Đặt Google Authentication &amp; Bảo Mật Kho</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="settingsModal">&times;</button>
+      </div>
+
+      <form id="settingsForm" autocomplete="off">
+        <div class="qr-stage compact-qr">
+          <div class="qr-frame">
+            <img id="settingsQrImage" alt="Google Authenticator QR Code" src="" />
+          </div>
+          <div class="qr-meta">
+            <div class="field-label">Mã QR Google Authenticator của kho này:</div>
+            <p class="step-desc">Dùng ứng dụng <strong>Google Authenticator</strong> trên điện thoại để quét nếu bạn đổi điện thoại mới hoặc muốn thêm thiết bị thứ 2.</p>
+            <div class="secret-copy-box">
+              <code id="settingsSecretText">...</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="settingsOwnerName" class="field-label">Tên kho mật khẩu</label>
+          <input type="text" id="settingsOwnerName" class="input-control" required />
+        </div>
+
+        <div class="form-group">
+          <label for="settingsAuthMode" class="field-label">Phương thức bắt buộc khi mở khóa kho</label>
+          <select id="settingsAuthMode" class="input-control">
+            <option value="totp_and_master">Mã 6 số Google Authenticator + Mật khẩu chính (Bảo mật 2 lớp)</option>
+            <option value="totp_only">Chỉ cần nhập Mã 6 số Google Authenticator (Mở nhanh)</option>
+            <option value="google_oauth_and_totp">Đăng nhập Tài khoản Google (OAuth 2.0) + Mã 6 số Google Authenticator</option>
+          </select>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="settingsGoogleEmail" class="field-label">Email Google liên kết (Cho Google OAuth)</label>
+            <input type="email" id="settingsGoogleEmail" class="input-control" placeholder="your.email@gmail.com" />
+          </div>
+          <div class="form-group">
+            <label for="settingsAutoLock" class="field-label">Tự động khóa sau khi không thao tác (Phút)</label>
+            <input type="number" id="settingsAutoLock" class="input-control" min="1" max="240" value="15" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="settingsGoogleClientId" class="field-label">Google OAuth 2.0 Client ID (Tùy chọn cho nút Sign in with Google)</label>
+          <input
+            type="text"
+            id="settingsGoogleClientId"
+            class="input-control mono-text"
+            placeholder="xxxx.apps.googleusercontent.com"
+          />
+          <small class="help-text">
+            Nếu nhập Client ID từ Google Cloud Console (Authorized JavaScript origins: <code>http://localhost:3456</code>), màn hình khóa sẽ hiển thị nút <strong>Sign in with Google</strong> chính thức kèm xác thực 6 số Google Authenticator.
+          </small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" data-close-modal="settingsModal">Đóng</button>
+          <button type="submit" class="btn-primary">Lưu Cài Đặt Bảo Mật</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 5: ENCRYPTED BACKUP EXPORT & IMPORT                            -->
+  <!-- ==================================================================== -->
+  <div id="backupModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2>💾 Sao Lưu Mã Hóa &amp; Nhập Dữ Liệu</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="backupModal">&times;</button>
+      </div>
+
+      <div class="backup-section">
+        <h3>1. Xuất bản sao lưu (Export Backup)</h3>
+        <p class="step-desc">Tải toàn bộ danh sách tài khoản về máy dưới dạng file mã hóa AES-256-GCM hoặc JSON để cất giữ an toàn.</p>
+        <div class="form-group">
+          <label for="exportBackupPassword" class="field-label">Mật khẩu khóa file sao lưu (Để trống nếu muốn xuất JSON thường)</label>
+          <input type="password" id="exportBackupPassword" class="input-control" placeholder="Tối thiểu 6 ký tự nếu muốn mã hóa AES-256..." />
+        </div>
+        <button type="button" id="exportBackupBtn" class="btn-primary">⬇️ Tải File Sao Lưu (.vault.json)</button>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="backup-section">
+        <h3>2. Khôi phục / Nhập từ file (Import Backup)</h3>
+        <p class="step-desc">Chọn file <code>.vault.json</code> đã sao lưu trước đó để nhập các tài khoản vào kho.</p>
+        <div class="form-group">
+          <input type="file" id="importBackupFile" accept=".json" class="input-control" />
+        </div>
+        <div class="form-group">
+          <label for="importBackupPassword" class="field-label">Mật khẩu giải mã file (Nếu file có đặt mật khẩu)</label>
+          <input type="password" id="importBackupPassword" class="input-control" placeholder="Nhập mật khẩu của file sao lưu..." />
+        </div>
+        <button type="button" id="importBackupBtn" class="btn-secondary">⬆️ Nhập Dữ Liệu Vào Kho</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 6: SECURITY AUDIT LOGS                                         -->
+  <!-- ==================================================================== -->
+  <div id="auditLogsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2>🛡️ Nhật Ký Bảo Mật &amp; Đăng Nhập</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="auditLogsModal">&times;</button>
+      </div>
+      <div id="auditLogsList" class="audit-logs-list"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary" data-close-modal="auditLogsModal">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./browser-vault-engine.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
