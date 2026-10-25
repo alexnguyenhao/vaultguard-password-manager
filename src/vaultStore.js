@@ -1,4 +1,5 @@
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const {
@@ -13,7 +14,18 @@ const {
 } = require('./crypto');
 const { generateTOTP, verifyTOTP } = require('./totp');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+function resolveDataDir() {
+  if (process.env.VAULTGUARD_DATA_DIR) {
+    return process.env.VAULTGUARD_DATA_DIR;
+  }
+  if (__dirname.includes('app.asar')) {
+    const baseDir = process.env.PORTABLE_EXECUTABLE_DIR || path.join(os.homedir(), '.vaultguard');
+    return path.join(baseDir, 'VaultGuard-Data');
+  }
+  return path.join(__dirname, '..', 'data');
+}
+
+const DATA_DIR = resolveDataDir();
 const VAULT_FILE = path.join(DATA_DIR, 'vault.enc.json');
 const DEVICE_KEY_FILE = path.join(DATA_DIR, '.device.key');
 

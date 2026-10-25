@@ -24,9 +24,9 @@ Nếu bạn muốn chạy máy chủ Backend Node.js (`server.js`) 24/7 trên Cl
 
 Người dùng có thể bấm tải trực tiếp phần mềm Desktop đóng gói bằng **Electron** về máy tính Windows (chạy ngay không cần cài đặt):
 
-- 👉 **[⬇️ Tải Trực Tiếp File `VaultGuard-Portable-1.0.0.exe` (Click là tải ngay)](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.0/VaultGuard-Portable-1.0.0.exe)**
-- 👉 **[📦 Tải Bản Nén `VaultGuard-Portable-1.0.0.zip`](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.0/VaultGuard-Portable-1.0.0.zip)**
-- 👉 **[Xem trang GitHub Releases v1.0.0](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/tag/v1.0.0)**
+- 👉 **[⬇️ Tải Trực Tiếp File `VaultGuard-Portable-1.0.1.exe` (Click là tải ngay)](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.1/VaultGuard-Portable-1.0.1.exe)**
+- 👉 **[📦 Tải Bản Nén `VaultGuard-Portable-1.0.1.zip`](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.1/VaultGuard-Portable-1.0.1.zip)**
+- 👉 **[Xem trang GitHub Releases mới nhất](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/latest)**
 
 ### Hoặc tải mã nguồn về chạy trên máy (Local):
 ```bash

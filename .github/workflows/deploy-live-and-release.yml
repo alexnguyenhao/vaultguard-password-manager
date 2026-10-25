@@ -66,13 +66,13 @@ jobs:
       - name: Publish to GitHub Releases (Latest Download)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: "VaultGuard Desktop v1.0.0 (Windows .EXE & Portable)"
+          tag_name: v1.0.1
+          name: "VaultGuard Desktop v1.0.1 (Windows .EXE & Portable - Fixed)"
           body: |
             ## 🛡️ VaultGuard — Phần mềm Quản lý Mật khẩu Đa Nền Tảng (Google Authentication)
-            ### 📥 Tải về cho máy tính Windows:
-            - **`VaultGuard-Portable-1.0.0.exe`**: Bản chạy ngay không cần cài đặt (Click đúp là mở).
-            - **`VaultGuard-win-x64.zip`**: Bản giải nén đầy đủ.
+            ### 📥 Tải về cho máy tính Windows (Bản v1.0.1 đã sửa lỗi đường dẫn Portable):
+            - **`VaultGuard-Portable-1.0.1.exe`**: Bản chạy ngay không cần cài đặt (Click đúp là mở).
+            - **`VaultGuard-Portable-1.0.1.zip`**: Bản giải nén đầy đủ.
             ### 🌐 Dùng trực tiếp trên Web 24/7 (Không cần cài đặt):
             - Truy cập: **https://alexnguyenhao.github.io/vaultguard-password-manager/**
           files: |

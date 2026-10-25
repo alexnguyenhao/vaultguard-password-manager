@@ -1,6 +1,6 @@
 {
   "name": "vaultguard-local-password-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Local Electron Desktop & 24/7 Cloud Web multi-platform password manager secured by Google Authentication (Google Authenticator TOTP 2FA + Google OAuth 2.0) and AES-256-GCM",
   "main": "electron/main.js",
   "author": "AlexNguyen <alex.nguyen.hao@gmail.com>",
@@ -15,6 +15,7 @@
   "build": {
     "appId": "com.alexnguyenhao.vaultguard",
     "productName": "VaultGuard",
+    "asar": false,
     "files": [
       "electron/**/*",
       "public/**/*",

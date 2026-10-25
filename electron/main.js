@@ -7,15 +7,30 @@ const {
   Menu
 } = require('electron');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const http = require('http');
-const serverModule = require('../server');
 
-const expressApp = serverModule.app || serverModule;
-const lockAllSessions = serverModule.lockAllSessions || (() => {});
+// 1. Resolve a real writable data directory on disk (works both in dev and packaged .EXE / app.asar)
+function resolveWritableBaseDir() {
+  if (!app.isPackaged && !__dirname.includes('app.asar')) {
+    return path.join(__dirname, '..', 'data');
+  }
+  // When running as Portable .EXE, store data in AppData\Local\VaultGuard (or next to executable if writable)
+  const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), '.vaultguard');
+  return path.join(localAppData, 'VaultGuardData');
+}
 
-// 1. Select an unlocked profile directory so Windows never throws 0x20 lockfile or 0x5 disk_cache errors
-let profileDir = path.join(__dirname, '..', 'data', 'electron-profile');
+const baseDataDir = resolveWritableBaseDir();
+try {
+  fs.mkdirSync(baseDataDir, { recursive: true });
+} catch {
+  // Fallback to OS temp/home directory if needed
+}
+process.env.VAULTGUARD_DATA_DIR = baseDataDir;
+
+// 2. Select an unlocked profile directory so Windows never throws 0x20 lockfile or 0x5 disk_cache errors
+let profileDir = path.join(baseDataDir, 'electron-profile');
 let isSecondaryInstance = false;
 try {
   fs.mkdirSync(profileDir, { recursive: true });
@@ -25,16 +40,23 @@ try {
     fs.closeSync(fd);
   }
 } catch {
-  // Primary profile is locked by an active Electron process; assign a clean per-process profile
   isSecondaryInstance = true;
-  profileDir = path.join(__dirname, '..', 'data', `electron-session-${process.pid}`);
-  fs.mkdirSync(profileDir, { recursive: true });
+  profileDir = path.join(baseDataDir, `electron-session-${process.pid}`);
+  try {
+    fs.mkdirSync(profileDir, { recursive: true });
+  } catch {
+    // Ignore
+  }
 }
 
 app.setPath('userData', profileDir);
 app.commandLine.appendSwitch('disable-http-cache');
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 app.commandLine.appendSwitch('disable-gpu-program-cache');
+
+const serverModule = require('../server');
+const expressApp = serverModule.app || serverModule;
+const lockAllSessions = serverModule.lockAllSessions || (() => {});
 
 let mainWindow = null;
 let localServer = null;
@@ -51,7 +73,6 @@ function startEmbeddedServer() {
 
     srv.once('error', (err) => {
       if (err.code === 'EADDRINUSE') {
-        // Verify if VaultGuard server is already active on serverPort
         const req = http.get(`http://127.0.0.1:${serverPort}/api/auth/status`, (res) => {
           res.resume();
           if (res.statusCode === 200) {
@@ -302,7 +323,6 @@ app.on('window-all-closed', () => {
       // Ignore
     }
   }
-  // Clean up temporary session profile dir if this was a secondary instance
   if (isSecondaryInstance) {
     try {
       fs.rmSync(profileDir, { recursive: true, force: true });
