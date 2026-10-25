@@ -22,9 +22,11 @@ Nếu bạn muốn chạy máy chủ Backend Node.js (`server.js`) 24/7 trên Cl
 
 ## 📥 2. Tải Bản Cài Đặt Desktop Windows (`.EXE` Portable)
 
-Người dùng có thể tải trực tiếp phần mềm Desktop đóng gói bằng **Electron** về máy tính Windows:
+Người dùng có thể bấm tải trực tiếp phần mềm Desktop đóng gói bằng **Electron** về máy tính Windows (chạy ngay không cần cài đặt):
 
-👉 **[Tải Xuống VaultGuard-Portable.exe tại mục GitHub Releases](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/latest)**
+- 👉 **[⬇️ Tải Trực Tiếp File `VaultGuard-Portable-1.0.0.exe` (Click là tải ngay)](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.0/VaultGuard-Portable-1.0.0.exe)**
+- 👉 **[📦 Tải Bản Nén `VaultGuard-Portable-1.0.0.zip`](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.0/VaultGuard-Portable-1.0.0.zip)**
+- 👉 **[Xem trang GitHub Releases v1.0.0](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/tag/v1.0.0)**
 
 ### Hoặc tải mã nguồn về chạy trên máy (Local):
 ```bash
