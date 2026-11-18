@@ -20,12 +20,28 @@ Nếu bạn muốn chạy máy chủ Backend Node.js (`server.js`) 24/7 trên Cl
 
 ---
 
-## 📥 2. Tải Bản Cài Đặt Desktop Windows (`.EXE` Portable)
+## 📥 2. Tải Bản Cài Đặt Desktop (Windows `.EXE` & macOS `.DMG`)
 
-Người dùng có thể bấm tải trực tiếp phần mềm Desktop đóng gói bằng **Electron** về máy tính Windows (chạy ngay không cần cài đặt):
+Phần mềm Desktop được đóng gói bằng **Electron** cho cả **Windows** và **macOS**.
 
-- 👉 **[⬇️ Tải Trực Tiếp File `VaultGuard-Portable-1.0.1.exe` (Click là tải ngay)](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.1/VaultGuard-Portable-1.0.1.exe)**
-- 👉 **[📦 Tải Bản Nén `VaultGuard-Portable-1.0.1.zip`](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.1/VaultGuard-Portable-1.0.1.zip)**
+### 🪟 Windows (`.EXE` Portable — chạy ngay không cần cài đặt)
+
+- 👉 **[⬇️ Tải Trực Tiếp File `VaultGuard-Portable-1.0.2.exe` (Click là tải ngay)](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.2/VaultGuard-Portable-1.0.2.exe)**
+- 👉 **[📦 Tải Bản Nén `VaultGuard-Portable-1.0.2.zip`](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.2/VaultGuard-Portable-1.0.2.zip)**
+
+### 🍎 macOS (`.DMG` — kéo thả vào Applications)
+
+- 👉 **[⬇️ Tải cho Mac Apple Silicon (M1 / M2 / M3 / M4) — `VaultGuard-1.0.2-arm64.dmg`](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.2/VaultGuard-1.0.2-arm64.dmg)**
+- 👉 **[⬇️ Tải cho Mac Intel — `VaultGuard-1.0.2-x64.dmg`](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/download/v1.0.2/VaultGuard-1.0.2-x64.dmg)**
+
+Sau khi tải: mở file `.dmg` → kéo **VaultGuard** vào thư mục **Applications**.
+
+> ⚠️ **Lần đầu mở bản chưa ký số (Unsigned):** macOS có thể báo *"VaultGuard is damaged"* hoặc *"unidentified developer"*.
+> Hãy bấm **chuột phải vào VaultGuard → Open → Open**, hoặc chạy lệnh sau trong Terminal:
+> ```bash
+> xattr -dr com.apple.quarantine /Applications/VaultGuard.app
+> ```
+
 - 👉 **[Xem trang GitHub Releases mới nhất](https://github.com/alexnguyenhao/vaultguard-password-manager/releases/latest)**
 
 ### Hoặc tải mã nguồn về chạy trên máy (Local):
@@ -35,7 +51,16 @@ cd vaultguard-password-manager
 npm install
 npm start
 ```
-*(Trên Windows, bạn cũng có thể click đúp trực tiếp vào file `start-vault.bat` để mở ứng dụng).*
+*(Trên Windows, bạn cũng có thể click đúp trực tiếp vào file `start-vault.bat`. Trên macOS, click đúp `start-vault.command`.)*
+
+### Tự build bản cài đặt trên máy của bạn:
+```bash
+npm run dist        # Windows: .EXE portable + .ZIP
+npm run dist:mac    # macOS: .DMG cho Apple Silicon + Intel
+npm run dist:all    # Cả hai nền tảng (chỉ build được macOS .DMG trên máy Mac/Linux runner)
+```
+
+> 💡 Bản `.DMG` hiện **chưa ký số (unsigned)** nên chưa cần Apple Developer ID. Nếu bạn có chứng chỉ Apple Developer, hãy đặt biến môi trường `CSC_LINK` và `CSC_KEY_PASSWORD` khi build để electron-builder tự ký và có thể bật notarization.
 
 ---
 
@@ -52,7 +77,9 @@ npm start
    - Gom nhóm nhiều nick trong cùng 1 nền tảng (VD: 5 tài khoản Gmail, 3 nick Facebook, nhiều tài khoản GitHub/Ngân hàng...).
    - Tích hợp bộ đếm mã **2FA TOTP trực tiếp** cho từng tài khoản lưu trong kho.
    - Tự động xóa bộ nhớ tạm (Clipboard) sau 20 giây khi Copy mật khẩu.
-3. **Bảo vệ Đặc Quyền trên Bản Electron Desktop**:
-   - **Chống chụp/quay lén màn hình (`setContentProtection`)** trên Windows.
-   - **Tự động khóa kho ngay lập tức** khi bạn bấm khóa màn hình máy tính (`Win + L`) hoặc Sleep.
+3. **Bảo vệ Đặc Quyền trên Bản Electron Desktop (Windows & macOS)**:
+   - **Chống chụp/quay lén màn hình (`setContentProtection`)** trên Windows và macOS.
+   - **Tự động khóa kho ngay lập tức** khi bạn khóa màn hình máy tính (`Win + L` trên Windows, `Control + Command + Q` trên macOS) hoặc khi máy Sleep.
    - **Ghim nổi cửa sổ (`Always on Top`)** để tiện đăng nhập nhiều tài khoản.
+   - **Menu native macOS** (About / Hide / Quit / Window) và phím tắt `⌘L`, `⌘R`, `⌘Q` chuẩn Mac.
+   - Dữ liệu được lưu tại `%LOCALAPPDATA%\VaultGuardData` (Windows) hoặc `~/Library/Application Support/VaultGuardData` (macOS).

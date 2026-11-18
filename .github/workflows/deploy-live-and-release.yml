@@ -1,4 +1,4 @@
-name: Go Live 24/7 (GitHub Pages) & Build Windows Desktop (.EXE)
+name: Go Live 24/7 (GitHub Pages) & Build Desktop Apps (.EXE + .DMG)
 
 on:
   push:
@@ -55,10 +55,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies & electron-builder
-        run: |
-          npm install
-          npm install --no-save electron-builder
+      - name: Install dependencies
+        run: npm install
 
       - name: Build Windows Portable .EXE & .ZIP
         run: npx electron-builder --win portable zip --publish never
@@ -66,13 +64,17 @@ jobs:
       - name: Publish to GitHub Releases (Latest Download)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.1
-          name: "VaultGuard Desktop v1.0.1 (Windows .EXE & Portable - Fixed)"
+          tag_name: v1.0.2
+          name: "VaultGuard Desktop v1.0.2 (Windows .EXE + macOS .DMG)"
           body: |
             ## 🛡️ VaultGuard — Phần mềm Quản lý Mật khẩu Đa Nền Tảng (Google Authentication)
-            ### 📥 Tải về cho máy tính Windows (Bản v1.0.1 đã sửa lỗi đường dẫn Portable):
-            - **`VaultGuard-Portable-1.0.1.exe`**: Bản chạy ngay không cần cài đặt (Click đúp là mở).
-            - **`VaultGuard-Portable-1.0.1.zip`**: Bản giải nén đầy đủ.
+            ### 📥 Tải về cho máy tính Windows (Bản v1.0.2):
+            - **`VaultGuard-Portable-1.0.2.exe`**: Bản chạy ngay không cần cài đặt (Click đúp là mở).
+            - **`VaultGuard-Portable-1.0.2.zip`**: Bản giải nén đầy đủ.
+            ### 🍎 Tải về cho máy tính macOS (Bản v1.0.2):
+            - **`VaultGuard-1.0.2-arm64.dmg`**: Dành cho Mac chip Apple Silicon (M1 / M2 / M3 / M4).
+            - **`VaultGuard-1.0.2-x64.dmg`**: Dành cho Mac chip Intel.
+            - *Lần đầu mở bản chưa ký số: bấm chuột phải vào VaultGuard → **Open** (hoặc chạy `xattr -dr com.apple.quarantine /Applications/VaultGuard.app`).*
             ### 🌐 Dùng trực tiếp trên Web 24/7 (Không cần cài đặt):
             - Truy cập: **https://alexnguyenhao.github.io/vaultguard-password-manager/**
           files: |
@@ -80,3 +82,33 @@ jobs:
             dist/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ==========================================================================
+  # JOB 3: BUILD macOS DESKTOP APP (.DMG) & ATTACH TO THE SAME RELEASE
+  # ==========================================================================
+  release-macos-desktop:
+    name: Build macOS Desktop (.DMG ARM64 + Intel) & Attach to Release
+    runs-on: macos-latest
+    needs: release-windows-desktop
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build macOS .DMG (Apple Silicon + Intel)
+        run: npx electron-builder --mac --arm64 --x64 --publish never
+        env:
+          # Chưa có Apple Developer ID => bỏ qua ký số để build vẫn thành công
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload .DMG files to the existing GitHub Release
+        run: gh release upload v1.0.2 dist/*.dmg --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

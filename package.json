@@ -1,6 +1,6 @@
 {
   "name": "vaultguard-local-password-manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Local Electron Desktop & 24/7 Cloud Web multi-platform password manager secured by Google Authentication (Google Authenticator TOTP 2FA + Google OAuth 2.0) and AES-256-GCM",
   "main": "electron/main.js",
   "author": "AlexNguyen <alex.nguyen.hao@gmail.com>",
@@ -10,7 +10,9 @@
     "electron": "electron .",
     "web": "node server.js",
     "test": "node test/verify-vault.js",
-    "dist": "npx electron-builder --win portable zip"
+    "dist": "npx electron-builder --win portable zip",
+    "dist:mac": "npx electron-builder --mac --arm64 --x64",
+    "dist:all": "npx electron-builder --win portable zip --mac --arm64 --x64"
   },
   "build": {
     "appId": "com.alexnguyenhao.vaultguard",
@@ -28,7 +30,47 @@
         "portable",
         "zip"
       ],
+      "icon": "build/icon.png",
       "artifactName": "VaultGuard-Portable-${version}.${ext}"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "VaultGuard-${version}-${arch}.${ext}",
+      "gatekeeperAssess": false,
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSHighResolutionCapable": true
+      }
+    },
+    "dmg": {
+      "title": "VaultGuard ${version}",
+      "artifactName": "VaultGuard-${version}-${arch}.${ext}",
+      "window": {
+        "width": 560,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 190
+        },
+        {
+          "x": 410,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     }
   },
   "dependencies": {
@@ -36,6 +78,7 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "electron": "^35.0.0"
+    "electron": "^35.0.0",
+    "electron-builder": "^26.18.0"
   }
 }

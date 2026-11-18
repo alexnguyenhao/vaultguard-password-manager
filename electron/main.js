@@ -11,10 +11,14 @@ const os = require('os');
 const fs = require('fs');
 const http = require('http');
 
-// 1. Resolve a real writable data directory on disk (works both in dev and packaged .EXE / app.asar)
+// 1. Resolve a real writable data directory on disk (works both in dev and packaged .EXE / .app)
 function resolveWritableBaseDir() {
   if (!app.isPackaged && !__dirname.includes('app.asar')) {
     return path.join(__dirname, '..', 'data');
+  }
+  if (process.platform === 'darwin') {
+    // macOS: ~/Library/Application Support/VaultGuardData
+    return path.join(app.getPath('appData'), 'VaultGuardData');
   }
   // When running as Portable .EXE, store data in AppData\Local\VaultGuard (or next to executable if writable)
   const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), '.vaultguard');
@@ -106,9 +110,11 @@ function listenOnRandomPort(resolve, reject) {
 }
 
 function createApplicationMenu() {
+  const isMac = process.platform === 'darwin';
+
   const template = [
     {
-      label: 'VaultGuard',
+      label: isMac ? 'Bảo mật & Kho' : 'VaultGuard',
       submenu: [
         {
           label: 'Khóa Kho Ngay (Lock Vault)',
@@ -159,13 +165,17 @@ function createApplicationMenu() {
             if (mainWindow && !mainWindow.isDestroyed()) mainWindow.reload();
           }
         },
-        {
-          label: 'Thoát VaultGuard',
-          accelerator: 'CmdOrCtrl+Q',
-          click: () => {
-            app.quit();
-          }
-        }
+        ...(isMac
+          ? []
+          : [
+              {
+                label: 'Thoát VaultGuard',
+                accelerator: 'CmdOrCtrl+Q',
+                click: () => {
+                  app.quit();
+                }
+              }
+            ])
       ]
     },
     {
@@ -181,6 +191,25 @@ function createApplicationMenu() {
       ]
     }
   ];
+
+  if (isMac) {
+    // Native macOS application menu (About / Hide / Quit) + standard Window menu
+    template.unshift({
+      label: app.name,
+      submenu: [
+        { role: 'about', label: 'Giới thiệu VaultGuard' },
+        { type: 'separator' },
+        { role: 'services', label: 'Dịch vụ' },
+        { type: 'separator' },
+        { role: 'hide', label: 'Ẩn VaultGuard' },
+        { role: 'hideOthers', label: 'Ẩn các ứng dụng khác' },
+        { role: 'unhide', label: 'Hiện tất cả' },
+        { type: 'separator' },
+        { role: 'quit', label: 'Thoát VaultGuard' }
+      ]
+    });
+    template.push({ role: 'windowMenu', label: 'Cửa sổ' });
+  }
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
@@ -294,6 +323,13 @@ ipcMain.handle('vault:toggle-always-on-top', () => {
 // App Lifecycle & OS Lock-Screen Auto-Lock
 // ============================================================================
 app.whenReady().then(async () => {
+  app.setAboutPanelOptions({
+    applicationName: 'VaultGuard',
+    applicationVersion: app.getVersion(),
+    version: process.versions.electron,
+    copyright: '© 2026 AlexNguyen',
+    credits: 'Kho mật khẩu cục bộ mã hóa AES-256-GCM • Google Authenticator 2FA'
+  });
   createApplicationMenu();
   await createMainWindow();
 
